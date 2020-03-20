@@ -1,9 +1,7 @@
 import tl = require('azure-pipelines-task-lib/task');
 import tr = require('azure-pipelines-task-lib/toolrunner');
-
-
 import path = require('path');
-import * as fs from 'fs';
+import fs = require('fs');
 
 async function runPowershell(script:string, filePath:string) {
     fs.writeFileSync(filePath, script, { encoding: 'utf8' });
@@ -29,61 +27,64 @@ async function runPowershell(script:string, filePath:string) {
         }
 }
 
+async function configureDockerConnection(dockerHostEndpoint:string, tempDirectory:string) {
+    console.log("Setting authentation for Docker Host")
+    const auth = tl.getEndpointAuthorization(dockerHostEndpoint, false)
+    const dockerCerts = path.join(tempDirectory, "docker-certs");
+    if(!fs.existsSync(dockerCerts)) {
+        fs.mkdirSync(dockerCerts);
+    }
+
+    fs.writeFileSync(path.join(dockerCerts, "ca.pem"), auth?.parameters.cacert);
+    fs.writeFileSync(path.join(dockerCerts, "cert.pem"), auth?.parameters.cert);
+    fs.writeFileSync(path.join(dockerCerts, "key.pem"), auth?.parameters.key);
+
+    process.env.DOCKER_HOST = tl.getEndpointUrl(dockerHostEndpoint, false);
+    process.env.DOCKER_TLS_VERIFY = "true"
+    process.env.DOCKER_CERT_PATH = dockerCerts;
+}
+
 async function run() {
     try {        
         let tempDirectory = tl.getVariable('agent.tempDirectory');
 
+        if (!tempDirectory) {
+            tl.setResult(tl.TaskResult.Failed, `Temp directory not defined`)
+            return;
+        }
+
         const azureHostEndpoint = tl.getInput("connectedServiceNameARM");
         const dockerHostEndpoint = tl.getInput("dockerHostEndpoint");
 
-        if (dockerHostEndpoint && tempDirectory) {
-            console.log("Got Docker service connection")
-            const auth = tl.getEndpointAuthorization(dockerHostEndpoint, false)
-            const dockerCerts = path.join(tempDirectory, "docker-certs");
-            if(!fs.existsSync(dockerCerts)) {
-                fs.mkdirSync(dockerCerts);
-            }
-
-            fs.writeFileSync(path.join(dockerCerts, "ca.pem"), auth?.parameters.cacert);
-            fs.writeFileSync(path.join(dockerCerts, "cert.pem"), auth?.parameters.cert);
-            fs.writeFileSync(path.join(dockerCerts, "key.pem"), auth?.parameters.key);
-
-            process.env.DOCKER_HOST = tl.getEndpointUrl(dockerHostEndpoint, false);
-            process.env.DOCKER_TLS_VERIFY = "true"
-            process.env.DOCKER_CERT_PATH = dockerCerts;
+        if (dockerHostEndpoint) {
+            configureDockerConnection(dockerHostEndpoint, tempDirectory);
         }
 
-        if (tempDirectory) {
-            let filePath = path.join(tempDirectory, 'Run-AzdoScript.ps1');
-            tl.checkPath(tempDirectory, `${tempDirectory} (agent.tempDirectory)`);
-            
-            const inputScript = tl.getInput("script");
-            let authScript: String = "";
-            
-            if (azureHostEndpoint) {
-                console.log("Got Azure service connection")
-                const auth = tl.getEndpointAuthorization(azureHostEndpoint, false);
-                
-                authScript = `
-                $pass = "${auth?.parameters.serviceprincipalkey}" | ConvertTo-SecureString -Force -AsPlainText
-                $cred = New-Object System.Management.Automation.PSCredential ("${auth?.parameters.serviceprincipalid}", $pass)
-                Login-AzAccount -Scope Process -ServicePrincipal -Credential $cred -Tenant ${auth?.parameters.tenantid}
-                `
-            }
+        let filePath = path.join(tempDirectory, 'Run-AzdoScript.ps1');
+        const inputScript = tl.getInput("script");
+        let authScript: String = "";
 
-            let script = `
-                $ErrorActionPreference = "Stop";
-                $ProgressPreference = "SilentlyContinue";
-                ${authScript}
-                ${inputScript}
-            `;
-
-            await runPowershell(script, filePath);
-            await runPowershell("Clear-AzContext -Force", path.join(tempDirectory, "Clear-AzContext.ps1"));
+        if (azureHostEndpoint) {
+            console.log("Got Azure service connection")
+            const auth = tl.getEndpointAuthorization(azureHostEndpoint, false);
+            
+            authScript = `
+            $pass = "${auth?.parameters.serviceprincipalkey}" | ConvertTo-SecureString -Force -AsPlainText
+            $cred = New-Object System.Management.Automation.PSCredential ("${auth?.parameters.serviceprincipalid}", $pass)
+            Login-AzAccount -Scope Process -ServicePrincipal -Credential $cred -Tenant ${auth?.parameters.tenantid}
+            `
         }
 
-    }
-    catch (err) {
+        let script = `
+            $ErrorActionPreference = "Stop";
+            $ProgressPreference = "SilentlyContinue";
+            ${authScript}
+            ${inputScript}
+        `;
+
+        await runPowershell(script, filePath);
+        await runPowershell("Clear-AzContext -Force", path.join(tempDirectory, "Clear-AzContext.ps1"));
+    } catch (err) {
         tl.setResult(tl.TaskResult.Failed, err.message);
     }
 }
