@@ -1,0 +1,22 @@
+{
+  "name": "pwsh-with-auth",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [],
+  "author": "Evops Limited",
+  "license": "ISC",
+  "dependencies": {
+    "azure-pipelines-task-lib": "^2.9.3",
+    "tfx-cli": "^0.7.11"
+  },
+  "devDependencies": {
+    "@types/mocha": "^7.0.2",
+    "@types/node": "^13.9.0",
+    "@types/q": "^1.5.2",
+    "sync-request": "^6.1.0"
+  }
+}

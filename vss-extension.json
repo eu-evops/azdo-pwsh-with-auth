@@ -1,0 +1,42 @@
+{
+    "manifestVersion": 1,
+    "id": "pwsh-with-auth",
+    "name": "Powershell with service connections",
+    "version": "1.0.0",
+    "publisher": "EvopsLimited",
+    "helpUrl": "https://github.com/eu-evops/azdo-pwsh-with-auth",
+    "helpMarkdown": "Get help at https://github.com/eu-evops/azdo-pwsh-with-auth",
+    "targets": [
+        {
+            "id": "Microsoft.VisualStudio.Services"
+        }
+    ],
+    "description": "Allows to make use of azure and docker service connections with your scripts",
+    "categories": [
+        "Azure Pipelines"
+    ],
+    "icons": {
+        "default": "images/extension-icon.png"
+    },
+    "files": [
+        {
+            "path": "pwsh-with-auth"
+        }
+    ],
+    "scopes": [
+        "vso.build_execute",
+        "vso.serviceendpoint_manage"
+    ],
+    "contributions": [
+        {
+            "id": "pwsh-with-auth",
+            "type": "ms.vss-distributed-task.task",
+            "targets": [
+                "ms.vss-distributed-task.tasks"
+            ],
+            "properties": {
+                "name": "pwsh-with-auth"
+            }
+        }
+    ]
+}

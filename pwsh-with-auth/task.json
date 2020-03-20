@@ -1,0 +1,60 @@
+{
+    "$schema": "https://raw.githubusercontent.com/Microsoft/azure-pipelines-task-lib/master/tasks.schema.json",
+    "id": "c7c8fd22-1439-4b51-be61-243807e6f5b1",
+    "name": "PwshWithAuth",
+    "friendlyName": "Powershell with service connections",
+    "description": "Allows you to run Powershell with Azure and Docker Host service connections",
+    "helpUrl": "https://github.com/eu-evops/pwsh",
+    "helpMarkDown": "Get help at https://github.com/eu-evops/pwsh",
+    "showEnvironmentVariables": true,
+    "category": "Utility",
+    "author": "Stanislaw Wozniak",
+    "version": {
+        "Major": 1,
+        "Minor": 0,
+        "Patch": 0
+    },
+    "groups": [
+        {
+            "name": "serviceConnections",
+            "displayName": "Service connections",
+            "isExpanded": true
+        }
+    ],
+    "inputs": [
+        {
+            "name": "script",
+            "type": "multiLine",
+            "label": "Powershell script",
+            "defaultValue": "$PSVersionTable",
+            "required": false,
+            "helpMarkDown": "Powershell script to execute"
+        },
+        {
+            "name": "connectedServiceNameARM",
+            "type": "connectedService:AzureRM",
+            "label": "Azure subscription",
+            "required": false,
+            "helpMarkDown": "Select an Azure resource manager subscription for the deployment",
+            "properties": {
+                "EndpointFilterRule": "ScopeLevel != ManagementGroup"
+            },
+            "groupName": "serviceConnections"
+        },
+        {
+            "name": "dockerHostEndpoint",
+            "type": "connectedService:dockerhost",
+            "label": "Docker host service connection",
+            "helpMarkDown": "Select a Docker host service connection. Defaults to the agent's host.",
+            "groupName": "serviceConnections"
+        }
+    ],
+    "messages": {
+        "JS_ExitCode": "PowerShell exited with code '%s'"
+    },
+    "execution": {
+        "Node10": {
+            "target": "index.js"
+        }
+    }
+}
