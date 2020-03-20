@@ -44,6 +44,10 @@ async function configureDockerConnection(dockerHostEndpoint:string, tempDirector
     process.env.DOCKER_CERT_PATH = dockerCerts;
 }
 
+function getProxyUri() {
+    return tl.getVariable("agent.proxyurl");
+}
+
 async function run() {
     try {        
         let tempDirectory = tl.getVariable('agent.tempDirectory');
@@ -64,20 +68,37 @@ async function run() {
         const inputScript = tl.getInput("script");
         let authScript: String = "";
 
+        let proxyUri = getProxyUri();
+        let proxyScript = "";
+        if(proxyUri) {
+            proxyScript = `
+                $proxy = New-Object System.Net.WebProxy "${proxyUri}"
+                [System.Net.WebRequest]::DefaultWebProxy = $proxy
+            `
+        }
+
         if (azureHostEndpoint) {
             console.log("Got Azure service connection")
             const auth = tl.getEndpointAuthorization(azureHostEndpoint, false);
             
+            const servicePrincipalKey = 
+                tl.getEndpointAuthorizationParameter(azureHostEndpoint, "serviceprincipalkey", false);
+            const servicePrincipalId = 
+                tl.getEndpointAuthorizationParameter(azureHostEndpoint, "serviceprincipalid", false);
+            const tenantId = 
+                tl.getEndpointAuthorizationParameter(azureHostEndpoint, "tenantId", false);
+
             authScript = `
-            $pass = "${auth?.parameters.serviceprincipalkey}" | ConvertTo-SecureString -Force -AsPlainText
-            $cred = New-Object System.Management.Automation.PSCredential ("${auth?.parameters.serviceprincipalid}", $pass)
-            Login-AzAccount -Scope Process -ServicePrincipal -Credential $cred -Tenant ${auth?.parameters.tenantid}
+            $pass = "${servicePrincipalKey}" | ConvertTo-SecureString -Force -AsPlainText
+            $cred = New-Object System.Management.Automation.PSCredential ("${servicePrincipalId}", $pass)
+            Login-AzAccount -Scope Process -ServicePrincipal -Credential $cred -Tenant ${tenantId}
             `
         }
 
         let script = `
             $ErrorActionPreference = "Stop";
             $ProgressPreference = "SilentlyContinue";
+            ${proxyScript}
             ${authScript}
             ${inputScript}
         `;
