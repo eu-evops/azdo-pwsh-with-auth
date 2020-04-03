@@ -3,7 +3,7 @@ import tr = require('azure-pipelines-task-lib/toolrunner');
 import path = require('path');
 import fs = require('fs');
 
-async function runPowershell(script:string, filePath:string) {
+async function runPowershell(script:string, filePath:string, env:{[key: string]: string} = {}) {
     fs.writeFileSync(filePath, script, { encoding: 'utf8' });
     console.log('========================== Starting Command Output ===========================');
     let powershell = tl.tool(tl.which('pwsh') || tl.which('powershell') || tl.which('pwsh', true))
@@ -17,7 +17,11 @@ async function runPowershell(script:string, filePath:string) {
             failOnStdErr: false,
             errStream: process.stdout, // Direct all output to STDOUT, otherwise the output may appear out
             outStream: process.stdout, // of order since Node buffers it's own STDOUT but not STDERR.
-            ignoreReturnCode: true
+            ignoreReturnCode: true,
+            env: {
+                ...env,
+                ...process.env
+            },
         };
 
         let exitCode: number = await powershell.exec(options);
@@ -69,12 +73,10 @@ async function run() {
         let authScript: String = "";
 
         let proxyUri = getProxyUri();
-        let proxyScript = "";
+        let env:{[key: string]: string} = {};
         if(proxyUri) {
-            proxyScript = `
-                $proxy = New-Object System.Net.WebProxy "${proxyUri}"
-                [System.Net.WebRequest]::DefaultWebProxy = $proxy
-            `
+            env.HTTP_PROXY=proxyUri;
+            env.HTTPS_PROXY=proxyUri;
         }
 
         if (azureHostEndpoint) {
@@ -89,6 +91,7 @@ async function run() {
                 tl.getEndpointAuthorizationParameter(azureHostEndpoint, "tenantId", false);
 
             authScript = `
+            Import-Module Az
             $pass = "${servicePrincipalKey}" | ConvertTo-SecureString -Force -AsPlainText
             $cred = New-Object System.Management.Automation.PSCredential ("${servicePrincipalId}", $pass)
             Login-AzAccount -Scope Process -ServicePrincipal -Credential $cred -Tenant ${tenantId}
@@ -98,13 +101,12 @@ async function run() {
         let script = `
             $ErrorActionPreference = "Stop";
             $ProgressPreference = "SilentlyContinue";
-            ${proxyScript}
             ${authScript}
             ${inputScript}
         `;
 
-        await runPowershell(script, filePath);
-        await runPowershell("Clear-AzContext -Force", path.join(tempDirectory, "Clear-AzContext.ps1"));
+        await runPowershell(script, filePath, env);
+        await runPowershell("Clear-AzContext -Force", path.join(tempDirectory, "Clear-AzContext.ps1"), env);
     } catch (err) {
         tl.setResult(tl.TaskResult.Failed, err.message);
     }

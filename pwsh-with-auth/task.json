@@ -4,15 +4,15 @@
     "name": "PwshWithAuth",
     "friendlyName": "Powershell with service connections",
     "description": "Allows you to run Powershell with Azure and Docker Host service connections",
-    "helpUrl": "https://github.com/eu-evops/pwsh",
-    "helpMarkDown": "Get help at https://github.com/eu-evops/pwsh",
+    "helpUrl": "https://github.com/eu-evops/azdo-pwsh-with-auth",
+    "helpMarkDown": "Get help at https://github.com/eu-evops/azdo-pwsh-with-auth.",
     "showEnvironmentVariables": true,
     "category": "Utility",
     "author": "Stanislaw Wozniak",
     "version": {
         "Major": 1,
         "Minor": 0,
-        "Patch": 6
+        "Patch": 9
     },
     "groups": [
         {
