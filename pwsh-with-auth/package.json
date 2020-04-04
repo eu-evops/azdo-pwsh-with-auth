@@ -2,7 +2,8 @@
   "name": "pwsh-with-service-connections",
   "version": "1.0.0",
   "description": "",
-  "main": "index.js",
+  "main": "Index.js",
+  "typings": "./typings.json",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1"
   },
@@ -14,9 +15,11 @@
     "tfx-cli": "^0.7.11"
   },
   "devDependencies": {
+    "@types/chai": "^4.2.11",
     "@types/mocha": "^7.0.2",
-    "@types/node": "^13.9.0",
-    "@types/q": "^1.5.2",
+    "@types/node": "^10.17.18",
+    "@types/q": "^1.5.0",
+    "chai": "^4.2.0",
     "sync-request": "^6.1.0"
   }
 }

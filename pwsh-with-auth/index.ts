@@ -1,76 +1,51 @@
 import tl = require('azure-pipelines-task-lib/task');
 import tr = require('azure-pipelines-task-lib/toolrunner');
 import path = require('path');
-import fs = require('fs');
+import util = require('util');
+import ServiceConnection from './Source/ServiceConnection';
+import DockerHostServiceConnection from './Source/ServiceConnections/DockerHostServiceConnection';
+import AzureServiceConnection from './Source/ServiceConnections/AzureServiceConnection';
+import PowershellExecutor from './Source/PowershellExecutor';
 
-async function runPowershell(script:string, filePath:string, env:{[key: string]: string} = {}) {
-    fs.writeFileSync(filePath, script, { encoding: 'utf8' });
-    console.log('========================== Starting Command Output ===========================');
-    let powershell = tl.tool(tl.which('pwsh') || tl.which('powershell') || tl.which('pwsh', true))
-        .arg('-NoLogo')
-        .arg('-NoProfile')
-        .arg('-NonInteractive')
-        .arg('-Command')
-        .arg(`. '${filePath.replace("'", "''")}'`);
-        
-        let options = <tr.IExecOptions>{
-            failOnStdErr: false,
-            errStream: process.stdout, // Direct all output to STDOUT, otherwise the output may appear out
-            outStream: process.stdout, // of order since Node buffers it's own STDOUT but not STDERR.
-            ignoreReturnCode: true,
-            env: {
-                ...env,
-                ...process.env
-            },
-        };
-
-        let exitCode: number = await powershell.exec(options);
-        // Fail on exit code.
-        if (exitCode !== 0) {
-            tl.setResult(tl.TaskResult.Failed, tl.loc('JS_ExitCode', exitCode));
-        }
-}
-
-async function configureDockerConnection(dockerHostEndpoint:string, tempDirectory:string) {
-    console.log("Setting authentation for Docker Host")
-    const auth = tl.getEndpointAuthorization(dockerHostEndpoint, false)
-    const dockerCerts = path.join(tempDirectory, "docker-certs");
-    if(!fs.existsSync(dockerCerts)) {
-        fs.mkdirSync(dockerCerts);
-    }
-
-    fs.writeFileSync(path.join(dockerCerts, "ca.pem"), auth?.parameters.cacert);
-    fs.writeFileSync(path.join(dockerCerts, "cert.pem"), auth?.parameters.cert);
-    fs.writeFileSync(path.join(dockerCerts, "key.pem"), auth?.parameters.key);
-
-    process.env.DOCKER_HOST = tl.getEndpointUrl(dockerHostEndpoint, false);
-    process.env.DOCKER_TLS_VERIFY = "true"
-    process.env.DOCKER_CERT_PATH = dockerCerts;
-}
+const serviceConnections: Array<ServiceConnection> = new Array<ServiceConnection>();
 
 function getProxyUri() {
     return tl.getVariable("agent.proxyurl");
 }
 
 async function run() {
-    try {        
-        let tempDirectory = tl.getVariable('agent.tempDirectory');
+    tl.setResourcePath(path.join( __dirname, 'task.json'));
 
+    
+    try {
+        let tempDirectory = tl.getVariable('agent.tempDirectory');
+        
         if (!tempDirectory) {
-            tl.setResult(tl.TaskResult.Failed, `Temp directory not defined`)
+            tl.setResult(tl.TaskResult.Failed, "Agent Temp directory not defined")
             return;
         }
+        
+        tl.debug(util.format("taskWorkingFolder=%s", tempDirectory));
 
         const azureHostEndpoint = tl.getInput("connectedServiceNameARM");
         const dockerHostEndpoint = tl.getInput("dockerHostEndpoint");
 
+        if (azureHostEndpoint) {
+            const dockerHostServiceConnection = new AzureServiceConnection(tempDirectory, azureHostEndpoint);
+            serviceConnections.push(dockerHostServiceConnection);
+        }
+
         if (dockerHostEndpoint) {
-            configureDockerConnection(dockerHostEndpoint, tempDirectory);
+            const dockerHostServiceConnection = new DockerHostServiceConnection(tempDirectory, dockerHostEndpoint);
+            serviceConnections.push(dockerHostServiceConnection);
         }
 
         let filePath = path.join(tempDirectory, 'Run-AzdoScript.ps1');
+
+        tl.debug('Reading script input')
         const inputScript = tl.getInput("script");
-        let authScript: String = "";
+
+        tl.debug(util.format("Input script: %s", inputScript));
 
         let proxyUri = getProxyUri();
         let env:{[key: string]: string} = {};
@@ -79,36 +54,24 @@ async function run() {
             env.HTTPS_PROXY=proxyUri;
         }
 
-        if (azureHostEndpoint) {
-            console.log("Got Azure service connection")
-            const auth = tl.getEndpointAuthorization(azureHostEndpoint, false);
-            
-            const servicePrincipalKey = 
-                tl.getEndpointAuthorizationParameter(azureHostEndpoint, "serviceprincipalkey", false);
-            const servicePrincipalId = 
-                tl.getEndpointAuthorizationParameter(azureHostEndpoint, "serviceprincipalid", false);
-            const tenantId = 
-                tl.getEndpointAuthorizationParameter(azureHostEndpoint, "tenantId", false);
+        let script = `$ErrorActionPreference = "Stop";\n`;
+        script += `$ProgressPreference = "SilentlyContinue";\n`;
+        script += `\n`;
+        script += inputScript;
 
-            authScript = `
-            Import-Module Az
-            $pass = "${servicePrincipalKey}" | ConvertTo-SecureString -Force -AsPlainText
-            $cred = New-Object System.Management.Automation.PSCredential ("${servicePrincipalId}", $pass)
-            Login-AzAccount -Scope Process -ServicePrincipal -Credential $cred -Tenant ${tenantId}
-            `
+        for(let i=0; i<serviceConnections.length; i++) {
+            await serviceConnections[i].setupAuth();
         }
 
-        let script = `
-            $ErrorActionPreference = "Stop";
-            $ProgressPreference = "SilentlyContinue";
-            ${authScript}
-            ${inputScript}
-        `;
+        const executor = new PowershellExecutor(script, filePath, env);
+        await executor.run();
 
-        await runPowershell(script, filePath, env);
-        await runPowershell("Clear-AzContext -Force", path.join(tempDirectory, "Clear-AzContext.ps1"), env);
     } catch (err) {
         tl.setResult(tl.TaskResult.Failed, err.message);
+    } finally {
+        for(let i=serviceConnections.length - 1; i==0; i--) {
+            await serviceConnections[i].cleanupAuth();
+        }
     }
 }
 
