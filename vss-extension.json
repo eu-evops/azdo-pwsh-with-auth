@@ -2,7 +2,7 @@
     "manifestVersion": 1,
     "id": "pwsh-with-auth",
     "name": "Powershell with service connections",
-    "version": "1.0.18",
+    "version": "1.0.37",
     "publisher": "EvopsLimited",
     "helpUrl": "https://github.com/eu-evops/azdo-pwsh-with-auth",
     "helpMarkdown": "Get help at https://github.com/eu-evops/azdo-pwsh-with-auth",
@@ -20,12 +20,17 @@
     },
     "files": [
         {
-            "path": "pwsh-with-auth"
+            "path": "pwsh-with-auth/build",
+            "packagePath": "pwsh-with-auth"
+        },
+        {
+            "path": "pwsh-with-auth/node_modules"
+        },
+        {
+            "path": "pwsh-with-auth/task.json"
         }
     ],
     "scopes": [
-        "vso.build_execute",
-        "vso.serviceendpoint_manage"
     ],
     "contributions": [
         {

@@ -38,7 +38,7 @@ export default class PowershellExecutor {
     let exitCode: number = await powershell.exec(options);
     // Fail on exit code.
     if (exitCode !== 0) {
-        tl.setResult(tl.TaskResult.Failed, tl.loc('JS_ExitCode', exitCode));
+        tl.setResult(tl.TaskResult.Failed, "Powershell exited with non-0 exit code");
     }
   }
 }

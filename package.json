@@ -4,17 +4,17 @@
   "description": "",
   "main": "index.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "build": "npx tsc",
+    "ext:create": "npx tfx extension create --manifest-globs vss-extension.json",
+    "ext:publish": "npx tfx extension publish --manifest-globs vss-extension.json -t $(cat .token) --auth-type pat --rev-version"
   },
   "keywords": [],
   "author": "Evops Limited",
   "license": "ISC",
   "dependencies": {
-    "azure-pipelines-task-lib": "^2.9.3",
-    "tfx-cli": "^0.7.11"
+    "azure-pipelines-task-lib": "^2.9.3"
   },
   "devDependencies": {
-    "@types/mocha": "^7.0.2",
     "@types/node": "^13.9.0",
     "@types/q": "^1.5.2",
     "sync-request": "^6.1.0"

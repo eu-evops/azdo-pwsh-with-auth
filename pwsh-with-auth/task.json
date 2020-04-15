@@ -12,7 +12,7 @@
     "version": {
         "Major": 1,
         "Minor": 0,
-        "Patch": 13
+        "Patch": 27
     },
     "groups": [
         {
@@ -47,11 +47,22 @@
             "label": "Docker host service connection",
             "helpMarkDown": "Select a Docker host service connection. Defaults to the agent's host.",
             "groupName": "serviceConnections"
+        },
+        {
+            "name": "dockerRegistryEndpoint",
+            "type": "connectedService:dockerregistry",
+            "label": "Docker Registry service connection",
+            "helpMarkDown": "Select Docker Registry service connection",
+            "groupName": "serviceConnections"
+        },
+        {
+            "name": "kubernetesHostEndpoint",
+            "type": "connectedService:kubernetes",
+            "label": "Kubernetes Service Connection",
+            "helpMarkDown": "Select a Kubernetes service connection.",
+            "groupName": "serviceConnections"
         }
     ],
-    "messages": {
-        "JS_ExitCode": "PowerShell exited with code '%s'"
-    },
     "execution": {
         "Node10": {
             "target": "Index.js"
