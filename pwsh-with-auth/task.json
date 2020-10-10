@@ -12,7 +12,7 @@
     "version": {
         "Major": 1,
         "Minor": 0,
-        "Patch": 27
+        "Patch": 29
     },
     "groups": [
         {
@@ -53,6 +53,13 @@
             "type": "connectedService:dockerregistry",
             "label": "Docker Registry service connection",
             "helpMarkDown": "Select Docker Registry service connection",
+            "groupName": "serviceConnections"
+        },
+        {
+            "name": "dockerRegistryIgnoreSSLErrors",
+            "type": "boolean",
+            "label": "Docker Registry - Ignore SSL certificate errors (not - recommended)",
+            "helpMarkDown": "Docker Registry - Ignore SSL certificate errors (not - recommended)",
             "groupName": "serviceConnections"
         },
         {

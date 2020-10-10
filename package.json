@@ -4,7 +4,6 @@
   "description": "",
   "main": "index.js",
   "scripts": {
-    "build": "npx tsc",
     "ext:create": "npx tfx extension create --manifest-globs vss-extension.json",
     "ext:publish": "npx tfx extension publish --manifest-globs vss-extension.json -t $(cat .token) --auth-type pat --rev-version"
   },
@@ -12,7 +11,10 @@
   "author": "Evops Limited",
   "license": "ISC",
   "dependencies": {
-    "azure-pipelines-task-lib": "^2.9.3"
+    "azure-pipelines-task-lib": "^2.9.3",
+    "easysax": "^0.3.2",
+    "saxophone": "^0.6.1",
+    "xml2js": "^0.4.23"
   },
   "devDependencies": {
     "@types/node": "^13.9.0",

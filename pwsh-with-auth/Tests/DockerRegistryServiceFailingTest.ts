@@ -6,12 +6,12 @@ import fs = require('fs');
 let taskPath = path.join(__dirname, '..', 'Index.js');
 let tmr: mockRun.TaskMockRunner = new mockRun.TaskMockRunner(taskPath);
 
-let answers = <ma.TaskLibAnswers> {
-  checkPath: { },
-  find: { },
+let answers = <ma.TaskLibAnswers>{
+  checkPath: {},
+  find: {},
   exec: {},
-  rmRF: { },
-  which: { }
+  rmRF: {},
+  which: {}
 };
 answers.which!['pwsh'] = '/usr/local/bin/pwsh';
 answers.which!['docker'] = '/usr/local/bin/docker';
@@ -31,14 +31,14 @@ answers.exec![taskCmd] = <ma.TaskLibAnswerExecResult>{
 
 const dockerConfigPath = path.resolve(`${tempDir}/.docker`)
 
-const loginCmd = `echo password | docker --config ${dockerConfigPath} login --username username --password-stdin registryUrl`
+const loginCmd = `echo password | docker --config ${dockerConfigPath} login --username username --password-stdin https://registryUrl`
 answers.exec![loginCmd] = <ma.TaskLibAnswerExecResult>{
   code: 0,
   stderr: '',
   stdout: "Successfully logged in"
 }
 
-const logout = `docker --config ${dockerConfigPath} logout registryUrl`
+const logout = `docker --config ${dockerConfigPath} logout https://registryUrl`
 answers.exec![logout] = <ma.TaskLibAnswerExecResult>{
   code: 0,
   stderr: '',
@@ -55,17 +55,23 @@ tmr.registerMockExport('getVariable', (key: string) => {
   return vars[key];
 })
 
+tmr.registerMock("../Library/Docker/Registry", class Registry {
+  static async validate() {
+    return true
+  }
+})
+
 tmr.setInput('script', "echo 1");
 // tmr.setInput('connectedServiceNameARM', 'azdo')
 tmr.setInput('dockerRegistryEndpoint', 'dockerRegistry')
 
-process.env.AGENT_TEMPDIRECTORY=tempDir
-process.env.ENDPOINT_URL_dockerRegistry="notRegistryUrl"
-process.env.ENDPOINT_AUTH_dockerRegistry=`{"parameters":{"username":"username","password":"password","registry":"registryUrl"},"scheme":"UsernamePassword"}`
-process.env.ENDPOINT_AUTH_SCHEME_dockerRegistry="UsernamePassword"
-process.env.ENDPOINT_AUTH_PARAMETER_dockerRegistry_USERNAME="username"
-process.env.ENDPOINT_AUTH_PARAMETER_dockerRegistry_PASSWORD="password"
-process.env.ENDPOINT_AUTH_PARAMETER_dockerRegistry_REGISTRY="registryUrl"
+process.env.AGENT_TEMPDIRECTORY = tempDir
+process.env.ENDPOINT_URL_dockerRegistry = "notRegistryUrl"
+process.env.ENDPOINT_AUTH_dockerRegistry = `{"parameters":{"username":"username","password":"password","registry":"https://registryUrl"},"scheme":"UsernamePassword"}`
+process.env.ENDPOINT_AUTH_SCHEME_dockerRegistry = "UsernamePassword"
+process.env.ENDPOINT_AUTH_PARAMETER_dockerRegistry_USERNAME = "username"
+process.env.ENDPOINT_AUTH_PARAMETER_dockerRegistry_PASSWORD = "password"
+process.env.ENDPOINT_AUTH_PARAMETER_dockerRegistry_REGISTRY = "https://registryUrl"
 
 tmr.run();
 

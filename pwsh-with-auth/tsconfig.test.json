@@ -1,0 +1,19 @@
+{
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "types": [
+      "node",
+      "jest"
+    ], /* Type declaration files to be included in compilation. */
+    "forceConsistentCasingInFileNames": true, /* Disallow inconsistently-cased references to the same file. */
+    "allowJs": true
+  },
+  "include": [
+    "Index.ts",
+    "Source",
+    "Tests",
+  ],
+  "exclude": [
+    "node_modules"
+  ]
+}

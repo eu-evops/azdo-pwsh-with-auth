@@ -14,7 +14,7 @@ interface Hash<T> {
     [key: string]: T
 }
 
-const supportedEndpoints:Hash<ServiceConnectionConstructor> = {
+const supportedEndpoints: Hash<ServiceConnectionConstructor> = {
     connectedServiceNameARM: AzureServiceConnection,
     dockerHostEndpoint: DockerHostServiceConnection,
     dockerRegistryEndpoint: DockerRegistryServiceConnection,
@@ -26,22 +26,22 @@ function getProxyUri(): tl.ProxyConfiguration | null {
 }
 
 async function run() {
-    tl.setResourcePath(path.join( __dirname, 'task.json'));
-    
+    tl.setResourcePath(path.join(__dirname, 'task.json'));
+
     const serviceConnections: Array<ServiceConnection> = new Array<ServiceConnection>();
-    
+
     try {
         let tempDirectory = tl.getVariable('agent.tempDirectory');
-        
+
         if (!tempDirectory) {
             tl.setResult(tl.TaskResult.Failed, "Agent Temp directory not defined")
             return;
         }
-        
+
         tl.debug(util.format("taskWorkingFolder=%s", tempDirectory));
 
         const scripts: Array<PathLike> = []
-        const environment: {[key:string]: string} = {}
+        const environment: { [key: string]: string } = {}
 
         Object.keys(supportedEndpoints).forEach(key => {
             const endpointId = tl.getInput(key);
@@ -59,31 +59,32 @@ async function run() {
         tl.debug(util.format("Input script: %s", inputScript));
 
         let proxyConfiguration = getProxyUri();
-        if(proxyConfiguration) {
-            environment.HTTP_PROXY=proxyConfiguration.proxyUrl;
-            environment.HTTPS_PROXY=proxyConfiguration.proxyUrl;
+        if (proxyConfiguration) {
+            environment.HTTP_PROXY = proxyConfiguration.proxyUrl;
+            environment.HTTPS_PROXY = proxyConfiguration.proxyUrl;
+            environment.NO_PROXY = proxyConfiguration.proxyBypassHosts ? proxyConfiguration.proxyBypassHosts.join(',') : "";
         }
 
-        for(let i=0; i<serviceConnections.length; i++) {
+        for (let i = 0; i < serviceConnections.length; i++) {
             const setupAuthResponse = await serviceConnections[i].setupAuth();
-            
+
             setupAuthResponse.scripts.forEach(script => {
                 scripts.push(script);
             })
-            
+
             Object.assign(environment, setupAuthResponse.environment);
         }
 
         let script = `$ErrorActionPreference = "Stop";\n`;
         script += `$ProgressPreference = "SilentlyContinue";\n`;
         script += `\n`;
-        
+
         scripts.forEach(s => {
             script += `${s}\n`
             script += "# Removing script so that credentials don't leak into underlying execution\n"
             script += `Remove-Item -Force ${s}\n`
         });
-        
+
         script += `\n`;
 
         script += inputScript;
@@ -94,7 +95,7 @@ async function run() {
     } catch (err) {
         tl.setResult(tl.TaskResult.Failed, err.message);
     } finally {
-        for(let i=serviceConnections.length - 1; i>=0; i-=1) {
+        for (let i = serviceConnections.length - 1; i >= 0; i -= 1) {
             await serviceConnections[i].cleanupAuth();
         }
     }

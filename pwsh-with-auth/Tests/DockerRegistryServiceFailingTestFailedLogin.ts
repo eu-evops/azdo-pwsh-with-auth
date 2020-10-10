@@ -16,8 +16,6 @@ let answers = <ma.TaskLibAnswers>{
 answers.which!['pwsh'] = '/usr/local/bin/pwsh';
 answers.which!['docker'] = '/usr/local/bin/docker';
 
-
-
 const tempDir = fs.mkdtempSync('azdotask-docker-registry-test');
 
 answers.rmRF![path.join(tempDir, '.docker')] = {
@@ -26,7 +24,7 @@ answers.rmRF![path.join(tempDir, '.docker')] = {
 
 const taskCmd = `/usr/local/bin/pwsh -NoLogo -NoProfile -NonInteractive -Command . '${tempDir}/Run-AzdoScript.ps1'`
 answers.exec![taskCmd] = <ma.TaskLibAnswerExecResult>{
-  code: 0,
+  code: 1,
   stderr: '',
   stdout: 'My script has executed'
 }
@@ -44,22 +42,23 @@ const logout = `docker --config ${dockerConfigPath} logout https://registryUrl`
 answers.exec![logout] = <ma.TaskLibAnswerExecResult>{
   code: 0,
   stderr: '',
-  stdout: "Successfully logged out"
+  stdout: "Successfully logged out in"
 }
 
-tmr.setAnswers(answers);
 
-tmr.registerMock("../Library/Docker/Registry", class Registry {
-  static async validate() {
-    return true
-  }
-})
+tmr.setAnswers(answers);
 
 const vars: { [key: string]: string } = {}
 vars["agent.tempDirectory"] = tempDir;
 
 tmr.registerMockExport('getVariable', (key: string) => {
   return vars[key];
+})
+
+tmr.registerMock("../Library/Docker/Registry", class Registry {
+  static async validate() {
+    return false
+  }
 })
 
 tmr.setInput('script', "echo 1");
