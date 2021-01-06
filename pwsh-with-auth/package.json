@@ -13,7 +13,7 @@
   "author": "Evops Limited",
   "license": "ISC",
   "dependencies": {
-    "axios": "^0.20.0",
+    "axios": "^0.21.1",
     "azure-pipelines-task-lib": "^2.9.3",
     "js-yaml": "^3.13.1"
   },
